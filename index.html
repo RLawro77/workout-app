@@ -16,12 +16,29 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
         function WorkoutApp() {
             const [currentWeek, setCurrentWeek] = useState(1);
             const [currentDay, setCurrentDay] = useState(1);
             const [completedWorkouts, setCompletedWorkouts] = useState({});
+
+            // Load saved progress when app starts
+            useEffect(() => {
+                const saved = localStorage.getItem('workoutProgress');
+                if (saved) {
+                    try {
+                        setCompletedWorkouts(JSON.parse(saved));
+                    } catch (e) {
+                        console.log('Error loading saved progress');
+                    }
+                }
+            }, []);
+
+            // Save progress whenever completedWorkouts changes
+            useEffect(() => {
+                localStorage.setItem('workoutProgress', JSON.stringify(completedWorkouts));
+            }, [completedWorkouts]);
 
             const workouts = {
                 '1-1': {

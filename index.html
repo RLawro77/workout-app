@@ -10,6 +10,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        .completed-exercise {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
     </style>
 </head>
 <body>
@@ -22,23 +26,38 @@
             const [currentWeek, setCurrentWeek] = useState(1);
             const [currentDay, setCurrentDay] = useState(1);
             const [completedWorkouts, setCompletedWorkouts] = useState({});
+            const [completedExercises, setCompletedExercises] = useState({});
 
             // Load saved progress when app starts
             useEffect(() => {
-                const saved = localStorage.getItem('workoutProgress');
-                if (saved) {
+                const savedWorkouts = localStorage.getItem('workoutProgress');
+                const savedExercises = localStorage.getItem('exerciseProgress');
+                
+                if (savedWorkouts) {
                     try {
-                        setCompletedWorkouts(JSON.parse(saved));
+                        setCompletedWorkouts(JSON.parse(savedWorkouts));
                     } catch (e) {
-                        console.log('Error loading saved progress');
+                        console.log('Error loading saved workout progress');
+                    }
+                }
+                
+                if (savedExercises) {
+                    try {
+                        setCompletedExercises(JSON.parse(savedExercises));
+                    } catch (e) {
+                        console.log('Error loading saved exercise progress');
                     }
                 }
             }, []);
 
-            // Save progress whenever completedWorkouts changes
+            // Save progress whenever completions change
             useEffect(() => {
                 localStorage.setItem('workoutProgress', JSON.stringify(completedWorkouts));
             }, [completedWorkouts]);
+
+            useEffect(() => {
+                localStorage.setItem('exerciseProgress', JSON.stringify(completedExercises));
+            }, [completedExercises]);
 
             const workouts = {
                 // WEEK 1 - Foundation & Volume
@@ -529,6 +548,30 @@
                 }));
             };
 
+            const toggleExercise = (exerciseIndex) => {
+                const key = `${currentWeek}-${currentDay}-${exerciseIndex}`;
+                setCompletedExercises(prev => ({
+                    ...prev,
+                    [key]: !prev[key]
+                }));
+            };
+
+            const isExerciseCompleted = (exerciseIndex) => {
+                const key = `${currentWeek}-${currentDay}-${exerciseIndex}`;
+                return completedExercises[key] || false;
+            };
+
+            const getExerciseProgress = () => {
+                if (!getCurrentWorkout()) return { completed: 0, total: 0 };
+                
+                const totalExercises = getCurrentWorkout().exercises.length;
+                const completedCount = getCurrentWorkout().exercises.filter((_, index) => 
+                    isExerciseCompleted(index)
+                ).length;
+                
+                return { completed: completedCount, total: totalExercises };
+            };
+
             const getPhase = (week) => {
                 if (week <= 4) return { name: "Foundation & Volume", color: "bg-blue-500" };
                 if (week <= 8) return { name: "Strength & Power", color: "bg-orange-500" };
@@ -548,6 +591,7 @@
             const completionPercentage = Math.round((totalCompleted / 72) * 100);
             const phase = getPhase(currentWeek);
             const currentWorkout = getCurrentWorkout();
+            const exerciseProgress = getExerciseProgress();
 
             return React.createElement('div', { className: "max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen" },
                 React.createElement('div', { className: "bg-white rounded-lg shadow-lg p-6 mb-6" },
@@ -560,6 +604,9 @@
                         ),
                         React.createElement('div', { className: "text-gray-600" },
                             `Week ${currentWeek} • Day ${currentDay}`
+                        ),
+                        currentWorkout && React.createElement('div', { className: "text-sm text-gray-500 mt-1" },
+                            `${exerciseProgress.completed}/${exerciseProgress.total} exercises completed`
                         )
                     ),
                     React.createElement('div', { className: "flex justify-between items-center mb-4" },
@@ -618,9 +665,13 @@
                                 currentWorkout.exercises.map((exercise, index) =>
                                     React.createElement('div', {
                                         key: index,
-                                        className: "p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500"
+                                        className: `p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500 flex items-center justify-between ${isExerciseCompleted(index) ? 'completed-exercise' : ''}`
                                     },
-                                        React.createElement('div', { className: "font-medium text-gray-800" }, exercise)
+                                        React.createElement('div', { className: "font-medium text-gray-800 flex-1" }, exercise),
+                                        React.createElement('button', {
+                                            onClick: () => toggleExercise(index),
+                                            className: `ml-4 w-8 h-8 rounded-full border-2 flex items-center justify-center ${isExerciseCompleted(index) ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-500'}`
+                                        }, isExerciseCompleted(index) ? '✓' : '')
                                     )
                                 )
                             )
